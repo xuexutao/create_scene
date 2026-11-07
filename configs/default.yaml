@@ -1,0 +1,83 @@
+runtime:
+  seed: 0
+  worker_timeout: 3600
+  retries: 0
+  continue_on_object_error: true
+
+models:
+  sam3:
+    python: null
+    repo_path: third_parts/sam3
+    model_path: null
+    device: cuda
+    dtype: float16
+    allow_download: false
+    categories: [chair, table, sofa, cabinet, lamp, bottle, cup, book, vase, plant, monitor, keyboard, bag, box]
+    score_threshold: 0.5
+  da3:
+    python: null
+    repo_path: third_parts/Depth-Anything-3
+    model_path: null
+    device: cuda
+    dtype: float16
+    allow_download: false
+    process_res: 504
+    max_views: 16
+    exclude_sky: true
+  flux2:
+    python: null
+    repo_path: third_parts/flux2
+    model_path: null
+    device: cuda
+    dtype: float16
+    allow_download: false
+    num_inference_steps: 28
+    guidance_scale: 4.0
+  trellis:
+    python: null
+    repo_path: third_parts/TRELLIS
+    model_path: null
+    device: cuda
+    dtype: float16
+    allow_download: false
+    texture_size: 1024
+    dino_repo_path: third_parts/dinov2
+    dino_model_path: null
+    rembg_model_path: checkpoints/rembg/u2net.onnx
+    attention_backend: xformers
+  maskgaussian:
+    python: null
+    repo_path: third_parts/MaskGaussian
+    device: cuda
+    iterations: 1000
+    sh_degree: 0
+    depth_weight: 0.1
+
+geometry:
+  min_confidence: 0.0
+  min_points: 32
+  outlier_neighbors: 16
+  outlier_std_ratio: 2.5
+fusion:
+  voxel_size: null
+  voxel_ratio: 0.005
+  match_distance_ratio: 0.08
+  min_overlap: 0.35
+  max_color_distance: 0.4
+  ambiguity_margin: 0.1
+completion:
+  padding: 0.25
+  image_size: 768
+registration:
+  sample_count: 12000
+  min_fitness: 0.5
+  max_rmse_ratio: 0.04
+  min_mask_iou: 0.25
+  max_relative_depth_error: 0.15
+  quality_max_side: 256
+background:
+  mode: train
+  voxel_size: null
+  voxel_ratio: 0.003
+  max_points: 250000
+  mask_dilation: 3

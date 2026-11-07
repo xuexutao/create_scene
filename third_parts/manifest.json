@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "repositories": {
+    "sam3": {"url": "https://github.com/facebookresearch/sam3.git", "commit": "f1647e8d0c1d280991f4d1b7d974c2704537fe66", "directory": "sam3"},
+    "da3": {"url": "https://github.com/ByteDance-Seed/Depth-Anything-3.git", "commit": "3d835ec1a5802d64a8b8b15f817a1ab54809bfe4", "directory": "Depth-Anything-3"},
+    "flux2": {"url": "https://github.com/black-forest-labs/flux2.git", "commit": "50fe5162777813d869182b139e83b10743caef15", "directory": "flux2"},
+    "trellis": {"url": "https://github.com/microsoft/TRELLIS.git", "commit": "193e0502b5cb3eb5997ec457d5340e95d09b158e", "directory": "TRELLIS"},
+    "maskgaussian": {"url": "https://github.com/kaikai23/MaskGaussian.git", "commit": "2f581d03d9e493babf7ab31e68c40f92e591f478", "directory": "MaskGaussian"},
+    "dinov2": {"url": "https://github.com/facebookresearch/dinov2.git", "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8", "directory": "dinov2"}
+  },
+  "required_submodules": {
+    "trellis_flexicubes": {"url": "https://github.com/MaxtirError/FlexiCubes.git", "commit": "815e075a2a400d06c48d94c347674344ed6ae5c5", "directory": "TRELLIS/trellis/representations/mesh/flexicubes"},
+    "maskgaussian_rasterizer": {"url": "https://github.com/kaikai23/mask-diff-gaussian-rasterization.git", "commit": "540dc11ef44c64f4c55fb894b3a4879de0cebfe7", "directory": "MaskGaussian/submodules/mask-diff-gaussian-rasterization"},
+    "gaussian_rasterizer": {"url": "https://github.com/graphdeco-inria/diff-gaussian-rasterization.git", "commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d", "directory": "MaskGaussian/submodules/diff-gaussian-rasterization"},
+    "simple_knn": {"url": "https://gitlab.inria.fr/bkerbl/simple-knn.git", "commit": "44f764299fa305faf6ec5ebd99939e0508331503", "directory": "MaskGaussian/submodules/simple-knn"}
+  },
+  "weights_downloaded": false,
+  "submodules_installed": false
+}

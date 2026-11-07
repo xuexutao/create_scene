@@ -1,0 +1,78 @@
+schema_version: 1
+status: reference_profiles_not_installed_or_gpu_validated
+main:
+  python: "3.9.16"
+  location: .venv
+  dependencies: pyproject.toml
+  validation: cpu_tests_passed
+rules:
+  - Install the scene-create package into every model environment so the worker can import its disk protocol and IO dependencies.
+  - Use separate Python executables in configs/default.yaml; do not install all model repositories into the main CPU environment.
+  - Source repositories and compiled source dependencies must stay below third_parts.
+  - Build CUDA extensions against the selected environment's exact PyTorch and CUDA Toolkit ABI.
+  - Model checkpoint licenses and access permissions must be approved before downloading.
+  - No model environment or GPU inference has been validated by this delivery.
+models:
+  sam3:
+    python: "3.12"
+    torch: "2.7.1"
+    torchvision: "0.22.1"
+    cuda: "12.6"
+    source: third_parts/sam3
+    installation: editable_repository_and_its_declared_dependencies
+    checkpoint: local_sam3.pt_with_approved_access
+    additional_dependencies: [einops, opencv-python, pycocotools, decord, hydra-core]
+  da3:
+    python: "3.11"
+    torch: "2.7.1"
+    torchvision: "0.22.1"
+    cuda: "12.6"
+    source: third_parts/Depth-Anything-3
+    installation: editable_repository_and_its_declared_dependencies
+    checkpoint: local_HuggingFace_model_directory_with_config.json_and_model.safetensors
+    supported_models: [DA3-SMALL, DA3-BASE, DA3-LARGE, DA3-GIANT, DA3NESTED-GIANT-LARGE]
+    unsupported: standalone_metric_or_mono_without_camera_solution
+    gaussian_head_required: false
+  flux2:
+    python: "3.12"
+    source: third_parts/flux2
+    backend: diffusers.Flux2Pipeline
+    diffusers: "0.36.0"
+    torch: "2.8.0"
+    torchvision: "0.23.0"
+    transformers: "4.57.3"
+    accelerate: "1.12.0"
+    sentencepiece: "0.2.1"
+    checkpoint: full_local_diffusers_FLUX.2-dev_directory_with_text_encoders_and_VAE
+    notes:
+      - The official source is retained for API provenance; this adapter uses the documented diffusers backend.
+      - FLUX.2-dev is a large 32B model. CPU offload is available but host RAM and VRAM still need profiling.
+      - Optional Flux2KleinPipeline requires a separately verified newer diffusers version and matching weights.
+      - T4 lacks native BF16. Float16 numerical behavior and any quantized deployment require real-model validation.
+  trellis:
+    python: "3.10"
+    torch: "2.4.0"
+    torchvision: "0.19.0"
+    cuda: "11.8"
+    source: third_parts/TRELLIS
+    installation: upstream_dependencies_and_compiled_extensions
+    checkpoint: local_TRELLIS-image-large_directory_with_pipeline.json_and_ckpts
+    auxiliary_sources: [third_parts/dinov2]
+    auxiliary_weights: [matching_dinov2_checkpoint, u2net.onnx]
+    rembg_session: u2net_custom_with_explicit_local_model_path
+    local_component_policy: require_json_and_safetensors_for_each_used_component_no_remote_fallback
+    unused_decoder: slat_decoder_rf_not_loaded
+    required_extensions: [spconv, nvdiffrast, mip_gaussian_rasterization]
+    attention_backend: xformers
+    note: Documented GPU prerequisite is at least 16GB; the detected T4 has 15GB usable memory.
+  maskgaussian:
+    python: "3.9"
+    torch: "2.1.0"
+    torchvision: "0.16.0"
+    cuda: "11.8"
+    source: third_parts/MaskGaussian
+    installation: upstream_dependencies_and_selected_submodules
+    required_extensions: [mask_diff_gaussian_rasterization, diff_gaussian_rasterization, simple_knn]
+    additional_dependencies: [icecream, tqdm, tensorboard]
+    pretrained_checkpoint_required: false
+    note: Trains from DA3 background points; no blacked-out foreground is used as RGB supervision.
