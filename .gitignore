@@ -10,4 +10,4 @@ output/
 checkpoints/
 third_parts/*
 !third_parts/manifest.json
-!third_parts/git_pull.py
+!third_parts/git_pull.sh
