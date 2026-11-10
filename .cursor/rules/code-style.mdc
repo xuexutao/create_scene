@@ -1,0 +1,738 @@
+---
+description: Python 代码规范，创建、修改或重构 Python 代码时使用
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python Code Style
+
+仅在创建、修改或重构 Python 代码时应用本规则。
+
+## 规则优先级
+
+正确性 > 可读性 > 可维护性 > 项目一致性 > 简洁性 > 性能。
+
+- 必须兼容 Python 3.9。
+- 当前任务中的明确要求优先于本规则。
+- 优先遵循项目已有的目录结构、命名习惯和工具配置。
+- 修改现有代码时保持最小改动，不修改、重构或格式化无关代码。
+- 选择满足当前需求的最简单实现。
+- 不为尚未出现的需求提前设计抽象层、兼容层、缓存或扩展机制。
+- 不主动引入类、设计模式、第三方依赖、异步或并发。
+- 代码优先服务于阅读和维护，不追求炫技或最少行数。
+- 本规则中的行数、参数数量和嵌套层数是审查信号，不得机械拆分代码。
+
+## 文件结构
+
+Python 文件通常按照以下顺序组织：
+
+1. 模块 Docstring。
+2. 标准库导入。
+3. 第三方库导入。
+4. 本地模块导入。
+5. 模块级 logger。
+6. 配置常量。
+7. 数据模型。
+8. 公共接口。
+9. 私有辅助函数。
+10. CLI 和脚本入口。
+
+- 模块 Docstring 必须位于文件第一行。
+- 顶层不得直接执行文件读写、网络请求、参数解析或业务任务。
+- 模块中的主要流程应从上到下自然阅读。
+- 相关函数、类和常量应放在相邻位置。
+- 不要仅为满足固定顺序而拆散关联紧密的代码。
+
+## 模块分区
+
+这里的“模块”指一个 Python 文件中的逻辑区域。
+
+每个重要逻辑模块前统一使用以下三行分隔注释：
+
+```python
+# -------------------------------------------
+# 模块作用
+# -------------------------------------------
+```
+
+示例：
+
+```python
+# -------------------------------------------
+# 配置常量
+# -------------------------------------------
+DEFAULT_TIMEOUT_SECONDS = 30
+MAX_RETRY_COUNT = 3
+
+# -------------------------------------------
+# 数据模型
+# -------------------------------------------
+@dataclass(frozen=True)
+class UserRecord:
+    ...
+
+# -------------------------------------------
+# 数据加载
+# -------------------------------------------
+def load_records(path: Path) -> list[UserRecord]:
+    ...
+
+# -------------------------------------------
+# 核心业务
+# -------------------------------------------
+def process_records(records: list[UserRecord]) -> list[UserRecord]:
+    ...
+
+# -------------------------------------------
+# 命令行入口
+# -------------------------------------------
+def main() -> int:
+    ...
+```
+
+- 分区标题应简短、准确，优先使用业务名称。
+- 推荐标题包括“配置常量”“数据模型”“数据加载”“数据解析”“核心业务”“结果输出”“命令行参数”“命令行入口”。
+- 分区标记只用于模块级逻辑区域。
+- 不在每个函数、方法、条件分支或小代码块前添加分区标记。
+- 不在三个导入组之间添加分区标记，导入组使用空行区分。
+- 分区标记上下应保留合理空行。
+- 分区不能替代合理的函数、类或文件拆分。
+- 单个分区职责过多时，应按业务含义继续拆分。
+- 同一项目不得混用其他长度或样式的装饰性分隔线。
+
+## 代码结构
+
+- 一个函数只承担一个清晰职责。
+- 一个函数中的代码应处于相同抽象层级。
+- 函数通常不超过 40 行有效代码。
+- 函数参数通常不超过 5 个。
+- 嵌套通常不超过 3 层。
+- 优先使用 guard clause 和 early return，减少多层 `if/else`。
+- 主要业务流程应清晰可见，复杂细节下沉到命名准确的函数。
+- 核心计算尽量写成无副作用的纯函数。
+- 文件、网络、数据库、日志和进度展示等副作用集中在边界层。
+- 同一函数应返回稳定一致的类型。
+- 不混用 `None`、空容器和异常表达同一种结果。
+- 不创建只调用另一个函数的一次性包装层。
+- 不提取只有一个调用方且没有独立业务语义的辅助函数。
+- 出现真实复用、独立概念或明显复杂逻辑后再进行抽象。
+- 不使用模块级可变全局状态。
+- 不通过全局变量在函数之间隐式传递业务数据。
+- 不在函数内部修改调用方传入的可变对象，除非函数名称和文档明确说明。
+- 布尔参数导致函数包含两套明显不同的流程时，拆成两个名称明确的函数。
+
+推荐：
+
+```python
+def save_record(record: Record) -> None:
+    if not record.is_valid:
+        return
+
+    serialized_record = serialize_record(record)
+    write_record(serialized_record)
+```
+
+避免：
+
+```python
+def save_record(record: Record) -> None:
+    if record.is_valid:
+        serialized_record = serialize_record(record)
+        if serialized_record:
+            if can_write(serialized_record):
+                write_record(serialized_record)
+```
+
+## 表达方式
+
+- 优先使用清晰的多行代码。
+- 禁止嵌套三元表达式。
+- 避免过长的链式调用。
+- 避免使用难以理解的复杂布尔表达式。
+- 复杂条件应提取为命名准确的布尔变量或函数。
+- 列表推导式只用于一个简单循环和至多一个简单条件。
+- 包含副作用、多个循环或复杂分支时，使用普通 `for` 循环。
+- 避免为了函数式风格滥用 `map`、`filter` 和 `reduce`。
+- lambda 只用于短小、无副作用且含义明显的表达式。
+- 不把赋值、循环、条件和函数调用压缩到同一行。
+- 避免重复计算、重复分支和不必要的临时容器。
+- 业务流程存在多个阶段时，使用空行划分局部逻辑段落。
+- 不使用大量空行掩盖函数职责过多的问题。
+
+推荐：
+
+```python
+is_active_user = user.is_active and not user.is_deleted
+has_permission = permission_service.can_access(user, resource)
+
+if not is_active_user or not has_permission:
+    return None
+```
+
+避免：
+
+```python
+if not (user.is_active and not user.is_deleted) or not permission_service.can_access(
+    user, resource
+):
+    return None
+```
+
+## 命名
+
+| 类型 | 风格 | 示例 |
+| --- | --- | --- |
+| 模块和包 | `snake_case` | `data_loader.py` |
+| 类 | `PascalCase` | `DataPipeline` |
+| 函数和方法 | `snake_case` | `fetch_records` |
+| 变量 | `snake_case` | `user_id` |
+| 常量 | `UPPER_SNAKE_CASE` | `MAX_RETRY_COUNT` |
+| 私有实现 | `_` 前缀 | `_parse_header` |
+| 布尔值或函数 | 谓词前缀 | `is_valid`、`has_data` |
+
+- 名称应表达业务含义，而不是仅表达数据类型或实现细节。
+- 函数名称优先使用动词或动宾结构。
+- 集合使用复数名称，例如 `records`、`user_ids`。
+- 布尔值和布尔函数优先使用 `is_`、`has_`、`can_`、`should_`。
+- 在较大作用域中避免 `data`、`info`、`obj`、`temp`、`value`、`result` 等模糊名称。
+- 除循环索引、坐标和数学公式外，避免单字符名称。
+- 禁止使用容易混淆的单字符名称，例如 `l`、`O`、`I`。
+- 避免拼音、非通用缩写和不必要的缩写。
+- 缩写形式在同一项目内保持一致，不混用 `id`、`ID` 和 `Id`。
+- 不创建职责模糊的 `Utils`、`Helper`、`Manager` 类。
+- 私有函数名称也应准确表达行为，不能只依赖 `_` 前缀说明用途。
+
+## 数据建模
+
+- 固定且闭合的状态集合使用 `Enum`。
+- 具有稳定字段的数据优先使用 `dataclass`、`NamedTuple` 或 `TypedDict`。
+- 主要用于保存数据且不需要修改的模型优先使用 `@dataclass(frozen=True)`。
+- 不使用依赖位置含义的长元组传递业务数据。
+- 不使用多个平行列表表达同一组对象。
+- 不为了减少函数参数而改用含义不明确的 `dict[str, Any]`。
+- 参数数量较多且具有稳定业务含义时，可以使用 `dataclass` 封装。
+- 不使用可变对象作为默认参数。
+- 默认参数应是稳定、轻量且没有副作用的值。
+
+推荐：
+
+```python
+@dataclass(frozen=True)
+class ProcessingOptions:
+    batch_size: int
+    timeout_seconds: int
+    should_overwrite: bool
+```
+
+避免：
+
+```python
+def process(options: dict[str, Any]) -> None:
+    ...
+```
+
+## 常量
+
+- 具有业务含义、容易误解或多处复用的值应提取为常量。
+- 不机械提取 `0`、`1`、空字符串、空列表等惯用值。
+- 常量名称必须表达业务含义和必要单位。
+- 有单位的常量应在名称或注释中注明单位。
+- 同一语义组中的常量应放在一起。
+- 不同语义组之间使用空行分隔。
+- 常量可以在定义行末添加说明性注释。
+- 连续多个常量的行内注释必须纵向对齐。
+
+示例：
+
+```python
+# fmt: off
+DEFAULT_TIMEOUT_SECONDS = 30  # 网络请求的默认超时时间
+MAX_RETRY_COUNT = 3           # 网络请求失败后的最大重试次数
+DEFAULT_BATCH_SIZE = 1_000    # 单批最多处理的记录数量
+OUTPUT_ENCODING = "utf-8"     # 文本输出使用的字符编码
+
+HTTP_SUCCESS_STATUS = 200     # HTTP 请求成功状态码
+HTTP_RETRY_STATUS = 429       # HTTP 请求需要限流重试的状态码
+# fmt: on
+```
+
+- `ruff format` 会把行内注释前的空格统一压缩为两个，因此需要对齐的常量块用 `# fmt: off` / `# fmt: on` 包围。
+- 只对齐行内注释，不对齐赋值符号或变量值。
+- 不为了对齐而在常量名称和 `=` 之间添加额外空格。
+- 如果对齐后超过 300 个字符，应将注释放到常量上一行。
+
+示例：
+
+```python
+# 服务端允许单个批处理请求包含的最大记录数量。
+MAX_RECORD_COUNT_PER_BATCH_REQUEST = 10_000
+```
+
+## 导入
+
+导入必须按照以下顺序分为三组：
+
+标准库 → 第三方库 → 本地模块。
+
+- 三组之间保留一个空行。
+- 每组内部按字母顺序排列。
+- 禁止 `import *` 和 `from xxx import *`。
+- 避免循环导入。
+- 禁止无理由的函数内导入。
+- 函数内导入仅用于可选依赖、昂贵依赖的延迟加载或暂时无法消除的循环依赖。
+- 函数内导入原因不明显时，添加简短注释说明。
+- 删除未使用和重复导入。
+- 不通过修改 `sys.path` 解决正常的包导入问题。
+- 例外：未安装即可运行的入口脚本可以把项目 `src/` 加入 `sys.path`；不可安装的第三方源码（`third_parts/`）可以在延迟加载时加入 `sys.path`。
+- 类型仅用于静态分析时，使用 `TYPE_CHECKING` 避免运行时循环依赖。
+
+示例：
+
+```python
+import argparse
+import logging
+from pathlib import Path
+from typing import Any, Optional
+
+import requests
+from tqdm import tqdm
+
+from project.models import UserRecord
+from project.services import RecordService
+```
+
+## 类型注解
+
+- 所有公共函数、公共方法和公共类接口必须有类型注解。
+- 复杂或容易误解的私有函数也应添加类型注解。
+- 不给类型显而易见的局部变量重复添加注解。
+- Python 3.9 使用 `list[int]`、`dict[str, Any]`、`tuple[str, ...]`。
+- 可选类型使用 `Optional[T]`。
+- 联合类型使用 `Union[A, B]`。
+- 禁止使用 Python 3.10 才支持的 `T | None`。
+- 禁止使用 Python 3.10 才支持的 `match/case`。
+- 无法准确描述类型时才使用 `Any`。
+- 不使用 `Any` 掩盖不清晰的数据结构或类型错误。
+- 类型注解必须描述真实运行时行为。
+- 不为了通过类型检查使用无根据的 `cast`。
+- 不随意添加 `# type: ignore`。
+- 必须忽略类型错误时，写明具体错误码，并在必要时说明原因。
+- 公共 API 中的容器参数，如果只要求读取，应优先使用 `Sequence`、`Mapping` 等抽象类型。
+- 返回新建的具体容器时，可以使用 `list`、`dict` 等具体类型。
+
+示例：
+
+```python
+from collections.abc import Mapping, Sequence
+from typing import Optional
+
+def find_user(
+    users: Sequence[User],
+    user_id: str,
+    metadata: Optional[Mapping[str, str]] = None,
+) -> Optional[User]:
+    ...
+```
+
+## Docstring
+
+- 模块顶部必须有简洁 Docstring，说明模块用途。
+- 公共类、公共函数和公共方法必须有 Docstring。
+- 简单公共 API 可以只写一行 Docstring。
+- 复杂 Docstring 统一使用 Google 风格。
+- 只有参数语义、约束、返回值或异常无法从签名直接看出时，才展开详细说明。
+- Docstring 不重复函数名称、类型注解或显而易见的代码步骤。
+- 私有函数仅在行为、约束、副作用或算法不明显时添加 Docstring。
+- 对外接口应在 Docstring 中声明调用方需要处理的异常。
+- Docstring 使用三重双引号。
+
+示例：
+
+```python
+def load_records(
+    input_path: Path,
+    limit: Optional[int] = None,
+) -> list[UserRecord]:
+    """从文件中加载用户记录。
+
+    Args:
+        input_path: 输入文件路径。
+        limit: 最大加载数量；为 `None` 时不限制。
+
+    Returns:
+        成功解析的用户记录。
+    """
+```
+
+## 注释
+
+- 注释主要解释“为什么这样做”，而不是逐行翻译代码。
+- 不为名称和结构已经表达清楚的代码添加注释。
+- 常量注释可以说明含义、单位、范围、来源或业务约束。
+- 正则表达式、状态机、数值算法和特殊兼容逻辑应使用 1 至 3 行注释说明意图。
+- 业务规则来源不明显时，应说明规则原因。
+- TODO 必须说明待完成事项，必要时附关联任务或上下文。
+- 删除失效注释、被注释掉的代码和调试代码。
+- 不为每一行代码机械添加注释。
+
+同一局部代码块内，连续出现的行内注释应纵向对齐：
+
+```python
+source_path = args.input_path        # 原始数据文件位置
+target_path = args.output_path       # 处理结果输出位置
+should_overwrite = args.force        # 是否允许覆盖已有结果
+show_progress = not args.quiet       # 是否向终端显示处理进度
+```
+
+- 行内注释前至少保留两个空格。
+- 只在相同缩进层级和相同语义组内对齐。
+- 不跨函数、跨分区或跨整个文件强制对齐。
+- 只对齐注释，不对齐赋值符号、字典值或函数参数。
+- 不同语义组之间不强制对齐。
+- 对齐后超过 300 个字符时，将注释放到代码上一行。
+- 注释较长或包含重要设计原因时，应优先放在代码上一行。
+
+示例：
+
+```python
+# 服务端可能已经完成操作，因此超时后只能重试幂等请求。
+should_retry = response.is_idempotent and remaining_retries > 0
+```
+
+## 错误处理
+
+- 禁止裸 `except:`。
+- 捕获具体异常，不使用宽泛异常代替正常分支判断。
+- 只有应用最外层边界允许捕获 `Exception`。
+- `try` 块应尽可能小，只包含可能抛出目标异常的操作。
+- 只在能够恢复、转换异常或补充上下文时捕获异常。
+- 转换异常时使用 `raise NewError(...) from exc` 保留异常链。
+- 不静默吞掉异常。
+- 不使用 `None`、空字符串或空容器隐藏真正的失败。
+- 错误信息应包含失败操作和必要上下文。
+- 错误信息不得包含密码、Token、Cookie 或其他敏感信息。
+- 不在同一层既记录异常又原样抛出，避免重复日志。
+- 预期内且可恢复的结果使用返回值表达。
+- 真正无法正常完成操作的情况使用异常表达。
+- 文件、锁、连接和数据库会话必须使用上下文管理器。
+
+示例：
+
+```python
+try:
+    payload = json.loads(content)
+except json.JSONDecodeError as exc:
+    raise ConfigurationError(f"配置文件格式错误: {config_path}") from exc
+```
+
+避免：
+
+```python
+try:
+    payload = json.loads(content)
+except Exception:
+    return {}
+```
+
+## 路径与文件
+
+- 文件系统路径统一使用 `pathlib.Path`。
+- 禁止使用 `os.path` 拼接或判断路径。
+- 不手工拼接 `/` 或 `\`。
+- 不假定当前工作目录等于脚本所在目录。
+- 文本文件必须显式指定 `encoding="utf-8"`。
+- 写文件前根据需要创建父目录。
+- 重要文件应优先使用临时文件加原子替换，避免产生半成品。
+- 处理大文件时优先流式读取，不无条件一次性加载到内存。
+- 文件、目录和符号链接应根据实际业务要求分别处理。
+
+示例：
+
+```python
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+output_path = PROJECT_ROOT / "data" / "result.json"
+output_path.parent.mkdir(parents=True, exist_ok=True)
+
+with output_path.open("w", encoding="utf-8") as output_file:
+    output_file.write(content)
+```
+
+## 日志
+
+本项目统一使用 `loguru`；标准库 `logging` 只用于把第三方日志桥接到 `loguru`。
+
+- 业务模块直接 `from loguru import logger`，不创建模块级 logger 对象。
+- 只有应用入口和日志工具模块负责配置日志（`logger.remove()` / `logger.add()`）。
+- 库模块禁止调用 `logging.basicConfig()` 或 `logger.add()`。
+- 禁止使用 `print` 输出业务日志。
+- CLI 的最终用户结果可以写入标准输出。
+- 运行状态、警告和异常使用日志。
+- 日志参数使用 `{}` 占位符，不使用 f-string 拼接。
+- 阶段、物体等业务上下文通过 `logger.contextualize()` 或 `logger.bind()` 传递，不拼进消息。
+- `debug` 用于诊断细节。
+- `info` 用于关键流程和状态变化。
+- `warning` 用于可恢复但需要关注的问题。
+- `error` 用于已知且无法完成的失败。
+- `exception` 只在异常处理位置使用。
+- 不记录每个函数的进入和退出。
+- 避免在循环中输出大量逐条日志。
+- 不输出密码、Token、Cookie、完整请求头或敏感业务数据。
+- 日志应包含定位问题所需的业务上下文，但不能包含无关数据。
+
+示例：
+
+```python
+from loguru import logger
+
+logger.info("Loaded {} records from {}", record_count, input_path)
+
+with logger.contextualize(stage="objects", object_id=object_id):
+    logger.info("Object fused")
+```
+
+应用入口统一配置日志：
+
+```python
+logger.remove()
+logger.add(sys.stderr, level="INFO", format="{time:HH:mm:ss} | {level:<7} | {extra[stage]} | {message}")
+```
+
+## CLI 与脚本入口
+
+本节仅适用于可执行脚本、CLI 和批处理程序。
+
+- 将参数解析、日志初始化和业务流程集中在 `main()`。
+- `main()` 应保持线性清晰。
+- parser.add_argument() 尽量用一行写出来，不要用括号分成好几行写一个参数解析，长度可以超过行长限制
+- 不为形式统一而创建只调用一次、且没有独立职责的短函数， 不要创建什么run()函数，内部就一个run_batch()函数。
+- 使用 `raise SystemExit(main())` 进入程序。
+- 只有最外层入口可以捕获 `Exception`。
+- `KeyboardInterrupt` 返回退出码 `130`，且不输出异常堆栈。
+- 参数解析应支持传入 `argv`，便于测试。
+- 日志配置只在入口层执行一次。
+
+```python
+"""批量处理用户记录。"""
+
+import argparse
+import sys
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Optional
+
+from loguru import logger
+
+# -------------------------------------------
+# 配置常量
+# -------------------------------------------
+# fmt: off
+DEFAULT_BATCH_SIZE = 1_000  # 单批最多处理的用户记录数量
+DEFAULT_LOG_LEVEL = "INFO"  # 命令行程序的默认日志级别
+# fmt: on
+
+
+# -------------------------------------------
+# 命令行入口
+# -------------------------------------------
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    """运行命令行程序并返回退出码。"""
+    parser = argparse.ArgumentParser(description="批量处理用户记录")
+    parser.add_argument("--input", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--log-level", default=DEFAULT_LOG_LEVEL)
+
+    args = parser.parse_args(argv)
+
+    if args.batch_size <= 0:
+        parser.error("--batch-size 必须大于 0")
+
+    logger.remove()
+    logger.add(sys.stderr, level=args.log_level)
+
+    try:
+        logger.info("Processing input: {}", args.input)
+
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+
+        logger.info("Output saved to: {}", args.output)
+        return 0
+    except KeyboardInterrupt:
+        logger.warning("Interrupted")
+        return 130
+    except Exception:
+        logger.exception("Unexpected failure")
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+## 进度展示
+
+- 进度条属于展示层，不得嵌入可复用的核心业务函数。
+- 只有面向用户、耗时明显且能够估算进度的批处理任务才使用 `tqdm`。
+- 不以“预计超过 1 秒”作为强制使用进度条的唯一条件。
+- 小循环、库函数、服务端请求处理和后台任务默认不使用进度条。
+- 非交互环境必须允许关闭进度条。
+- 嵌套进度条使用 `position`。
+- 内层进度条通常设置 `leave=False`。
+- 禁止使用 `print` 模拟进度条。
+- 避免让普通日志破坏进度条显示。
+
+示例：
+
+```python
+for item in tqdm(items, desc="Processing", unit="item", disable=not show_progress):
+    process_item(item)
+```
+
+## 并发
+
+- 默认先实现正确、清晰的顺序版本。
+- 只有任务彼此独立、性能瓶颈明确且并发收益可验证时才引入并发。
+- IO 密集任务使用 `ThreadPoolExecutor`。
+- CPU 密集任务使用 `ProcessPoolExecutor`。
+- 数千连接的大量异步 IO 才考虑 `asyncio`。
+- 不在已有同步项目中仅为少量并发改写整个调用链。
+- `max_workers` 应允许调用方配置。
+- 线程池默认值可以使用 `min(32, (os.cpu_count() or 1) + 4)`。
+- worker 应尽量保持无副作用。
+- 优先避免共享可变状态。
+- 必须共享可变状态时，使用锁进行保护。
+- 必须消费每个 future 的结果并处理异常。
+- 只有业务明确要求时才维持输入顺序。
+- 不向进程池传递 lambda、闭包、打开的文件句柄或不可 pickle 对象。
+- 并发任务应考虑超时、取消、部分失败和资源释放。
+- 不允许工作线程静默失败。
+
+## 时间与随机数
+
+- 存储和内部传递时间时使用带时区的 UTC 时间。
+- 只在展示层转换为本地时区。
+- 禁止混用 naive datetime 和 aware datetime。
+- 使用 `datetime.now(timezone.utc)` 获取当前 UTC 时间。
+- 时间单位应体现在变量名或注释中。
+- 测试和可复现算法应允许显式传入 seed。
+- 使用局部 `random.Random(seed)`，不要随意修改全局随机状态。
+- 密码、Token 和安全随机值使用 `secrets`，不得使用 `random`。
+
+示例：
+
+```python
+from datetime import datetime, timezone
+from random import Random
+
+created_at = datetime.now(timezone.utc)
+random_generator = Random(seed)
+```
+
+## 性能与资源
+
+- 不进行没有数据支撑的提前优化。
+- 优化前先确定真实瓶颈。
+- 大文件优先流式处理。
+- 避免在循环中重复创建昂贵对象。
+- 避免在循环中执行可以提前完成的解析、编译或配置加载。
+- 正则表达式被频繁使用时可以预编译。
+- 数据量较大时避免不必要的多次复制。
+- 生成器只在能够减少内存占用或改善数据流时使用。
+- 不为了使用生成器而牺牲代码可读性。
+- 数据库和网络操作应避免明显的逐条请求问题。
+- 所有外部资源必须有明确的释放路径。
+
+## 测试
+
+- 新增或修改业务行为时，应补充对应测试。
+- 测试重点覆盖正常路径、边界条件和预期异常。
+- 修复缺陷时，应优先添加能够复现缺陷的回归测试。
+- 测试名称应描述场景和预期结果。
+- 一个测试只验证一个明确行为。
+- 测试代码也应遵守命名、类型和结构规则。
+- 不依赖测试执行顺序。
+- 不让单元测试真实访问网络、生产数据库或外部服务。
+- 时间、随机数和外部依赖应能够被控制或替换。
+- 不为了测试私有实现而破坏公共 API。
+- 优先测试可观察行为，而不是实现细节。
+
+示例：
+
+```python
+def test_load_records_returns_empty_list_for_empty_file(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "records.jsonl"
+    input_path.write_text("", encoding="utf-8")
+
+    records = load_records(input_path)
+
+    assert records == []
+```
+
+## 安全性
+
+- 不在源代码中硬编码密码、Token、密钥或内部凭据。
+- 敏感配置从环境变量或安全配置系统读取。
+- 日志和异常信息不得泄露敏感数据。
+- 外部输入必须在使用边界进行校验。
+- 文件路径来自外部输入时，应考虑路径穿越风险。
+- SQL 使用参数化查询，不手工拼接用户输入。
+- Shell 命令优先使用参数列表，不使用字符串拼接。
+- 除非确有必要，不使用 `shell=True`。
+- 反序列化不可信数据时，不使用不安全的 `pickle`。
+- 密码和安全随机值使用 `secrets`。
+- 不关闭 TLS 校验来绕过证书问题。
+
+## 格式
+
+- 行长不超过 200 个字符。
+- 字符串默认使用双引号。
+- Docstring 使用三重双引号。
+- 使用括号进行多行换行，不使用反斜杠续行。
+- 多行集合、函数调用和函数签名保留尾逗号。
+- 运算符和逗号后保留规范空格。
+- 逻辑段落之间使用一个空行。
+- 模块级函数和类之间使用两个空行。
+- 不为了减少行数压缩代码。
+- 不手工对齐赋值符号、字典值或函数参数。
+- 同一语义组中的行内注释必须对齐。
+- 对齐注释时不能突破 200 字符行长限制。
+- 格式化后应再次检查分区格式和注释对齐情况。
+
+## 质量检查
+
+完成代码后必须检查：
+
+- 是否兼容 Python 3.9。
+- 是否存在 Python 3.10 以上语法。
+- 是否存在未使用或重复导入。
+- 是否存在未使用变量、死代码和调试输出。
+- 是否存在重复逻辑。
+- 是否存在过长函数、过深嵌套或模糊命名。
+- 是否引入了不必要的类、依赖、并发或抽象层。
+- 是否错误捕获或静默吞掉异常。
+- 是否遗漏资源释放。
+- 是否泄露敏感信息。
+- 是否修改了需求之外的代码。
+- 是否能够使用更直接、更清晰的方式表达相同逻辑。
+- 是否正确添加了模块分区。
+- 模块分区是否只用于重要的顶层逻辑区域。
+- 连续常量的行内注释是否对齐。
+- 同一局部代码块中的行内注释是否对齐；函数体内需要对齐时优先把注释移到上一行，避免到处使用 `# fmt: off`。
+- 注释是否解释业务含义或设计原因，而不是翻译代码。
+- 注释对齐后是否仍满足 200 字符行长限制。
+
+## 自动化工具
+
+- 使用 `ruff format` 统一基础格式。
+- 使用 `ruff check` 检查导入、错误和常见代码问题。
+- 推荐启用 `E`、`F`、`I`、`B` 和 `UP` 规则，并忽略 `UP007`、`UP045`：在 Python 3.9 上它们会建议改写为被本规则禁止的 `X | None`。
+- Ruff 必须配置 Python 3.9 目标版本，`line-length = 200`。
+- 谨慎启用全部 `SIM` 规则，避免把清晰代码改成难读的一行表达式。
+- 自动修复后必须重新检查代码语义。
+- 不盲目接受所有自动改写。
+- 自动格式化后必须保留本规则要求的模块分区。
+- 需要纵向对齐的常量块使用 `# fmt: off` / `# fmt: on`，避免自动格式化反复抹掉对齐。

@@ -1,3 +1,3 @@
-"""Object-centric scene reconstruction."""
+"""以物体为中心的场景重建：单张或多视图图片到可分离的 mesh 与 Gaussian 场景资产。"""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

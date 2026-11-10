@@ -5,11 +5,13 @@ main:
   location: .venv
   dependencies: pyproject.toml
   validation: cpu_tests_passed
+execution: single_process
 rules:
-  - Install the scene-create package into every model environment so the worker can import its disk protocol and IO dependencies.
-  - Use separate Python executables in configs/default.yaml; do not install all model repositories into the main CPU environment.
+  - All five models are imported lazily and run in the interpreter that executes main.py; there are no worker subprocesses.
+  - A real-inference environment must satisfy every model below at once and have this package installed; the per-model versions are upstream references, not a validated joint lock.
+  - Known joint-environment risks to resolve before GPU validation are SAM3's Python >= 3.12 pin versus MaskGaussian's torch 2.1 reference, and MaskGaussian's generic top-level module names (scene, utils, gaussian_renderer).
   - Source repositories and compiled source dependencies must stay below third_parts.
-  - Build CUDA extensions against the selected environment's exact PyTorch and CUDA Toolkit ABI.
+  - Build CUDA extensions against the environment's exact PyTorch and CUDA Toolkit ABI.
   - Model checkpoint licenses and access permissions must be approved before downloading.
   - No model environment or GPU inference has been validated by this delivery.
 models:
